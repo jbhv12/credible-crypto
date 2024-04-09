@@ -57,10 +57,10 @@ const Home: NextPage = () => {
   const sendRelayRequest = async () => {
     const provider = new ethers.providers.Web3Provider(window.ethereum as any);
     const signer = provider.getSigner();
-    const user = await signer.getAddress();
+    const user =  await signer.getAddress();
 
     const g_contract = new ethers.Contract(target, ReviewTokenABI.abi, signer);
-    const { data } = await g_contract.populateTransaction.owner();
+    const {data} =  await g_contract.populateTransaction.owner();
 
     console.log(chainId);
 
@@ -72,15 +72,8 @@ const Home: NextPage = () => {
     };
     const relayResponse = await relay.sponsoredCallERC2771(request, provider, gelatoAPI);
     console.log(relayResponse);
+    
   };
-
-  const [review, setReview] = useState("");
-  const [rating, setRating] = useState(0);
-
-  const submitReview = async () => {
-  };
-
-
   return (
     <main className={styles.main}>
       <div className={styles.container}>
@@ -88,59 +81,20 @@ const Home: NextPage = () => {
           <h1 className={styles.title}>
             Welcome to{" "}
             <span className={styles.gradientText0}>
-              My Actually Awesome App
+                My Actually Awesome App
             </span>
           </h1>
-
-          <div>
-            <h2>Reviews</h2>
-            <iframe width="100%" id="tokenerc721_inventory_pageiframe" src="https://etherscan.io/token/0xf4ecc1c74d120649f6598c7a217abaffdf76cd4f#inventory" scrolling="yes"></iframe>
+          <div className={styles.connect}>
+            <ConnectWallet />
           </div>
 
           <div>
-            <h2>Features!</h2>
-            <div className={styles.connect}>
-              <ConnectWallet />
-            </div>
+            <p>{owner}</p>
+            {owner === address ? <p>true</p> : <p>false</p>}
+
             <button id="relayRequest" onClick={sendRelayRequest}>
-              Use Some Feature
+              Send Request
             </button>
-
-
-            <div className="review-box">
-              <h2>Write a Review</h2>
-              <label htmlFor="review">
-                Rating:
-                <select value={rating} onChange={(e) => setRating(parseInt(e.target.value))}>
-                  <option value={0}>1</option>
-                  <option value={1}>2</option>
-                  <option value={2}>3</option>
-                  <option value={3}>4</option>
-                  <option value={4}>5</option>
-                  <option value={5}>6</option>
-                  <option value={6}>7</option>
-                  <option value={7}>8</option>
-                  <option value={8}>9</option>
-                  <option value={9}>10</option>
-                </select>
-              </label>
-              <label htmlFor="reviewText">
-                Review:
-                <textarea id="reviewText" value={review} onChange={(e) => setReview(e.target.value)} />
-              </label>
-              <button onClick={submitReview}>Submit Review</button>
-            </div>
-
-            {owner === address ? (
-              <div>
-                <h2>Admin Settings</h2>
-                <div>
-                  <p> setting 1 </p>
-                </div>
-              </div>
-            ) : (
-              <h2>Contract owner is {owner}. If you are the contract owner, switch account to manage admin settings.</h2>
-            )}
 
           </div>
         </div>
