@@ -19,10 +19,12 @@ import { NextPage } from "next";
 import { useState, useEffect } from "react";
 
 const Home: NextPage = () => {
+  const { mutateAsync: upload } = useStorageUpload();
   const target = "0xEA4C26D469312A9BBC24bC89F6061ebC212fF37F";
   const address = useAddress();
   const chainId = useChainId();
   const { contract } = useContract(target, ReviewTokenABI.abi);
+  const gelatoAPI = "IeTEZaCSVQtOSQbBCnQV8JxGBJiOgH_X_bMGwOJw5uY_";
   const relay = new GelatoRelay();
   relay.onTaskStatusUpdate((taskStatus: TransactionStatusResponse) => {
     console.log("Task status update", taskStatus);
@@ -41,14 +43,12 @@ const Home: NextPage = () => {
         setContractCallStatus(currentState => ({ ...currentState, uiText: "idle, last job completed successfully" }));
       }
     }
-
-
   });
-  const gelatoAPI = "IeTEZaCSVQtOSQbBCnQV8JxGBJiOgH_X_bMGwOJw5uY_";
 
   const [review, setReview] = useState("");
   const [rating, setRating] = useState(0);
-  const [statusMsg, setStatusMsg] = useState(""); // todo remove
+  const [reviewTokenId, setReviewTokenId] = useState(-1);
+
   interface ContractCallStatus {
     working: boolean;
     uiText: string;
@@ -73,48 +73,41 @@ const Home: NextPage = () => {
       web3Signer.getAddress().then(setUser);
       const contract = new ethers.Contract(target, ReviewTokenABI.abi, web3Signer);
       setGContract(contract);
+
+      // todo get existing token if it exists
     } else {
       console.error("Please install MetaMask!");
     }
   }, []);
-  // const [owner, setOwner] = useState<string | null>(null);
-
-  // useEffect(() => {
-  //   const fetchOwner = async () => {
-  //     try {
-  //       const ownerResult = await contract?.call("owner", []);
-  //       setOwner(ownerResult);
-  //     } catch (error) {
-  //       console.error("Error fetching owner:", error);
-  //     }
-  //   };
-  //   fetchOwner();
-  // }, [contract]);
-
-  // console.log(contract?.call("owner", []));
 
   const submitReview = async () => {
-    setStatusMsg("Submitting review...");
-    const provider = new ethers.providers.Web3Provider(window.ethereum as any);
-    const signer = provider.getSigner();
-    const user = await signer.getAddress();
+    if(g_contract) {
+      const { data } = await g_contract.populateTransaction.writeReview(review, rating, "https://ipfs.io/ipfs/QmSUXEirCUGZrEMKkJ5jFdbR5oac5TmRTbmayaLicFGobe/0");
 
-    const g_contract = new ethers.Contract(target, ReviewTokenABI.abi, signer);
-    const { data } = await g_contract.populateTransaction.writeReview(review, rating, "https://ipfs.io/ipfs/QmSUXEirCUGZrEMKkJ5jFdbR5oac5TmRTbmayaLicFGobe/0");
+      const request: CallWithERC2771Request = {
+        chainId: chainId,
+        target: target,
+        data: data as BytesLike,
+        user: user
+      };
+      const relayResponse = await relay.sponsoredCallERC2771(request, provider, gelatoAPI);
+      // todo set status
+    }
+  };
 
-    console.log(chainId);
+  const burnToken = async () => {
+    if(g_contract) {
+      const { data } = await g_contract.populateTransaction.burn(reviewTokenId);
 
-    const request: CallWithERC2771Request = {
-      chainId: chainId,
-      target: target,
-      data: data as BytesLike,
-      user: user
-    };
-    const relayResponse = await relay.sponsoredCallERC2771(request, provider, gelatoAPI);
-    const taskStatus = await relay.getTaskStatus(relayResponse.taskId);
-    console.log(relayResponse);
-    console.log(taskStatus);
-    setStatusMsg("Review submitted!"); // todo give link to check the minted token
+      const request: CallWithERC2771Request = {
+        chainId: chainId,
+        target: target,
+        data: data as BytesLike,
+        user: user
+      };
+      const relayResponse = await relay.sponsoredCallERC2771(request, provider, gelatoAPI);
+      // todo set status
+    }
   };
 
   const useFunctionality = async () => {
@@ -132,10 +125,7 @@ const Home: NextPage = () => {
     }
   };
 
-  const { mutateAsync: upload } = useStorageUpload();
-
   const uploadData = async () => {
-    setStatusMsg("uploading to IPFS...");
     const dataToUpload = [JSON.stringify(
       {
         "description": "Review Token for MyApp",
@@ -171,13 +161,16 @@ const Home: NextPage = () => {
     )];
     const uris = await upload({ data: dataToUpload });
     console.log(uris);
-    setStatusMsg("IPFS upload complete!");
-    return uris;
+    const updatedString = uris[0].replace("://", "/");
+    console.log("https://ipfs.io/" + updatedString);
+    return "https://ipfs.io/" + updatedString;
   };
-
 
   const handleClick = () => {
     throw new Error('This is a custom exception thrown on button click');
+  };
+
+  const getTokenId = async () => {
   };
 
   return (
@@ -208,37 +201,48 @@ const Home: NextPage = () => {
 
             <div className="review-box">
               <h2>Write a Review</h2>
-              <div>
-                <label htmlFor="review">
-                  Rating:
-                  <select value={rating !== null ? rating : ''} onChange={(e) => setRating(parseInt(e.target.value))}>
-                    <option value="" disabled>Select Rating</option>
-                    <option value={1}>1</option>
-                    <option value={2}>2</option>
-                    <option value={3}>3</option>
-                    <option value={4}>4</option>
-                    <option value={5}>5</option>
-                    <option value={6}>6</option>
-                    <option value={7}>7</option>
-                    <option value={8}>8</option>
-                    <option value={9}>9</option>
-                    <option value={10}>10</option>
-                  </select>
-                </label>
-                <label htmlFor="reviewText">
-                  Review:
-                  <textarea id="reviewText" value={review} onChange={(e) => setReview(e.target.value)} />
-                </label>
-              </div>
-              <div>
-                <button onClick={submitReview} disabled={rating == 0}>Submit Review</button>
-                <button onClick={uploadData} disabled={rating == 0}>Upload to IPFS</button>
-                <button onClick={handleClick}>exception</button>
+              {reviewTokenId == -1 ? (
+                <div>
+                  <p>Write a review and get rewared with 0.05 eth!</p>
+                  <div>
+                    <label htmlFor="review">
+                      Rating:
+                      <select value={rating !== null ? rating : ''} onChange={(e) => setRating(parseInt(e.target.value))}>
+                        <option value="" disabled>Select Rating</option>
+                        <option value={1}>1</option>
+                        <option value={2}>2</option>
+                        <option value={3}>3</option>
+                        <option value={4}>4</option>
+                        <option value={5}>5</option>
+                        <option value={6}>6</option>
+                        <option value={7}>7</option>
+                        <option value={8}>8</option>
+                        <option value={9}>9</option>
+                        <option value={10}>10</option>
+                      </select>
+                    </label>
+                    <label htmlFor="reviewText">
+                      Review:
+                      <textarea id="reviewText" value={review} onChange={(e) => setReview(e.target.value)} />
+                    </label>
+                  </div>
+                  <div>
+                    <button onClick={submitReview}>Submit Review</button>
+                    <button onClick={uploadData}>Upload to IPFS</button>
+                    <button onClick={handleClick}>exception</button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <p>review alreayd written with token id xxxx</p>
+                  <button onClick={burnToken}>Burn</button>
+                </div>
+              )}
+            </div>
 
-                {statusMsg && (
-                  <p>{statusMsg}</p>
-                )}
-              </div>
+            <div>
+              <h2>App Status: </h2>
+              <p>{contractCallStatus.uiText}</p>
             </div>
 
             {/* {owner === address ? (
