@@ -3,6 +3,7 @@ import {
   useAddress,
   useChainId,
   useContract,
+  useContractRead,
   useMetamask,
   useNFTs,
   ConnectWallet,
@@ -20,10 +21,12 @@ import { useState, useEffect } from "react";
 
 const Home: NextPage = () => {
   const { mutateAsync: upload } = useStorageUpload();
-  const target = "0xEA4C26D469312A9BBC24bC89F6061ebC212fF37F";
+  const target = "0x2d3a765fF6326Fc365D58E3CbE9b0a7687528E67";
   const address = useAddress();
   const chainId = useChainId();
-  const { contract } = useContract(target, ReviewTokenABI.abi);
+  const { contract } = useContract(target);
+  const { data: reviewTokenId, isLoading, error } = useContractRead(contract, "getTokenId", [address]); // TODO: test with wallet switch!!!, and only if wallte is connected!!!
+
   const gelatoAPI = "IeTEZaCSVQtOSQbBCnQV8JxGBJiOgH_X_bMGwOJw5uY_";
   const relay = new GelatoRelay();
   relay.onTaskStatusUpdate((taskStatus: TransactionStatusResponse) => {
@@ -42,12 +45,18 @@ const Home: NextPage = () => {
       if (taskStatus.taskState === "ExecSuccess") {
         setContractCallStatus(currentState => ({ ...currentState, uiText: "idle, last job completed successfully" }));
       }
+      else if (taskStatus.taskState === "Cancelled") {
+        let msg = "idle, last job cancelled";
+        if (taskStatus.lastCheckMessage) {
+          msg += " with message : " + taskStatus.lastCheckMessage; //todo fix this!!
+        }
+        setContractCallStatus(currentState => ({ ...currentState, uiText: msg }));
+      }
     }
   });
 
   const [review, setReview] = useState("");
   const [rating, setRating] = useState(0);
-  const [reviewTokenId, setReviewTokenId] = useState(-1);
 
   interface ContractCallStatus {
     working: boolean;
@@ -71,10 +80,12 @@ const Home: NextPage = () => {
       setProvider(web3Provider);
       setSigner(web3Signer);
       web3Signer.getAddress().then(setUser);
-      const contract = new ethers.Contract(target, ReviewTokenABI.abi, web3Signer);
-      setGContract(contract);
+      const g_contract = new ethers.Contract(target, ReviewTokenABI.abi, web3Signer);
+      setGContract(g_contract);
 
       // todo get existing token if it exists
+      // getTokenId();
+    
     } else {
       console.error("Please install MetaMask!");
     }
@@ -82,7 +93,8 @@ const Home: NextPage = () => {
 
   const submitReview = async () => {
     if(g_contract) {
-      const { data } = await g_contract.populateTransaction.writeReview(review, rating, "https://ipfs.io/ipfs/QmSUXEirCUGZrEMKkJ5jFdbR5oac5TmRTbmayaLicFGobe/0");
+      setContractCallStatus(currentState => ({ ...currentState, working: true, uiText: "Sumbitting your review and minting soulbound token" }));
+      const { data } = await g_contract.populateTransaction.writeReview(rating, "https://ipfs.io/ipfs/QmSUXEirCUGZrEMKkJ5jFdbR5oac5TmRTbmayaLicFGobe/0");
 
       const request: CallWithERC2771Request = {
         chainId: chainId,
@@ -97,6 +109,7 @@ const Home: NextPage = () => {
 
   const burnToken = async () => {
     if(g_contract) {
+      setContractCallStatus(currentState => ({ ...currentState, working: true, uiText: "burning token" }));
       const { data } = await g_contract.populateTransaction.burn(reviewTokenId);
 
       const request: CallWithERC2771Request = {
@@ -106,7 +119,7 @@ const Home: NextPage = () => {
         user: user
       };
       const relayResponse = await relay.sponsoredCallERC2771(request, provider, gelatoAPI);
-      // todo set status
+      setContractCallStatus(currentState => ({ ...currentState, submitReviewTaskId: relayResponse.taskId })); // todo
     }
   };
 
@@ -165,13 +178,12 @@ const Home: NextPage = () => {
     console.log("https://ipfs.io/" + updatedString);
     return "https://ipfs.io/" + updatedString;
   };
-
-  const handleClick = () => {
-    throw new Error('This is a custom exception thrown on button click');
-  };
-
   const getTokenId = async () => {
+    
+    console.log(reviewTokenId);
+    console.log(reviewTokenId._hex);
   };
+  // const getTokenId = async () => useContractRead(contract, "getTokenId", [address]).data;
 
   return (
     <main className={styles.main}>
@@ -207,7 +219,7 @@ const Home: NextPage = () => {
                   <div>
                     <label htmlFor="review">
                       Rating:
-                      <select value={rating !== null ? rating : ''} onChange={(e) => setRating(parseInt(e.target.value))}>
+                      <select value={rating !== null ? rating : ''} onChange={(e) => setRating(parseInt(e.target.value))} disabled={contractCallStatus.working}>
                         <option value="" disabled>Select Rating</option>
                         <option value={1}>1</option>
                         <option value={2}>2</option>
@@ -223,13 +235,13 @@ const Home: NextPage = () => {
                     </label>
                     <label htmlFor="reviewText">
                       Review:
-                      <textarea id="reviewText" value={review} onChange={(e) => setReview(e.target.value)} />
+                      <textarea id="reviewText" value={review} onChange={(e) => setReview(e.target.value)} disabled={contractCallStatus.working}/>
                     </label>
                   </div>
                   <div>
-                    <button onClick={submitReview}>Submit Review</button>
-                    <button onClick={uploadData}>Upload to IPFS</button>
-                    <button onClick={handleClick}>exception</button>
+                    <button onClick={submitReview} disabled={contractCallStatus.working}>Submit Review</button>
+                    <button onClick={uploadData} disabled={contractCallStatus.working}>Upload to IPFS</button>
+                    <button onClick={getTokenId} disabled={contractCallStatus.working}>Check token</button> 
                   </div>
                 </div>
               ) : (
@@ -244,18 +256,6 @@ const Home: NextPage = () => {
               <h2>App Status: </h2>
               <p>{contractCallStatus.uiText}</p>
             </div>
-
-            {/* {owner === address ? (
-              <div>
-                <h2>Admin Settings</h2>
-                <div>
-                  <p> setting 1 </p>
-                </div>
-              </div>
-            ) : (
-              <h2>Contract owner is {owner}. If you are the contract owner, switch account to manage admin settings.</h2>
-            )} */}
-
           </div>
         </div>
       </div>
