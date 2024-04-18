@@ -25,7 +25,8 @@ const Home: NextPage = () => {
   const address = useAddress();
   const chainId = useChainId();
   const { contract } = useContract(target);
-  const { data: reviewTokenId, isLoading, error } = useContractRead(contract, "getTokenId", [address]); // TODO: test with wallet switch!!!, and only if wallte is connected!!!
+  const { data: reviewTokenId } = useContractRead(contract, "getTokenId", [address]); // TODO: test with wallet switch!!!, and only if wallte is connected!!!
+  const { data: avgRatings } = useContractRead(contract, "getAvgRating", []); // TODO: test with wallet switch!!!, and only if wallte is connected!!!
 
   const gelatoAPI = "IeTEZaCSVQtOSQbBCnQV8JxGBJiOgH_X_bMGwOJw5uY_";
   const relay = new GelatoRelay();
@@ -166,9 +167,12 @@ const Home: NextPage = () => {
     }
   };
 
-  // const test = () => {
-  //   console.log(reviewTokenId.toNumber());
-  // }
+  const getAvgRating = () => {
+    if (avgRatings) {
+      return avgRatings.toNumber()/1000;
+    }
+    return -1;
+  }
 
   const getTokenId = () => {
     if(reviewTokenId) {
@@ -190,6 +194,8 @@ const Home: NextPage = () => {
 
           <div >
             <h2>Reviews</h2>
+            <p>xx people say so with an avg rating of {getAvgRating()}</p>
+            {/* https://sepolia-blockscout.lisk.com/token/0xA3f3e7478455583DC325319AF3c79ccC9B9F1462?tab=holders */}
           </div>
 
           <div className={styles.connect}>
