@@ -21,7 +21,7 @@ import { useState, useEffect } from "react";
 
 const Home: NextPage = () => {
   const { mutateAsync: upload } = useStorageUpload();
-  const target = "0x2d3a765fF6326Fc365D58E3CbE9b0a7687528E67";
+  const target = "0xA3f3e7478455583DC325319AF3c79ccC9B9F1462";
   const address = useAddress();
   const chainId = useChainId();
   const { contract } = useContract(target);
@@ -39,6 +39,9 @@ const Home: NextPage = () => {
       // update task id
       if (taskStatus.taskId === contractCallStatus.functionalityCallTaskId) {
         setContractCallStatus(currentState => ({ ...currentState, functionalityCallTaskId: null }));
+      }
+      else if (taskStatus.taskId === contractCallStatus.submitReviewTaskId) {
+        setContractCallStatus(currentState => ({ ...currentState, submitReviewTaskId: null }));
       }
 
       // set status
@@ -85,16 +88,41 @@ const Home: NextPage = () => {
 
       // todo get existing token if it exists
       // getTokenId();
-    
+
     } else {
       console.error("Please install MetaMask!");
     }
   }, []);
 
+  const uploadData = async () => {
+    const dataToUpload = [JSON.stringify(
+      {
+        "description": "Review Token for MyApp",
+        "image": "https://storage.googleapis.com/opensea-prod.appspot.com/puffs/" + rating + ".png",
+        "name": "MyApp Raring #" + rating,
+        "attributes": [
+          {
+            "display_type": "number",
+            "trait_type": "Rating",
+            "value": rating
+          },
+          {
+            "trait_type": "Review",
+            "value": review
+          }
+        ]
+      }
+    )];
+    const uris = await upload({ data: dataToUpload });
+    return "https://ipfs.io/" + uris[0].replace("://", "/");
+  };
+
   const submitReview = async () => {
-    if(g_contract) {
-      setContractCallStatus(currentState => ({ ...currentState, working: true, uiText: "Sumbitting your review and minting soulbound token" }));
-      const { data } = await g_contract.populateTransaction.writeReview(rating, "https://ipfs.io/ipfs/QmSUXEirCUGZrEMKkJ5jFdbR5oac5TmRTbmayaLicFGobe/0");
+    if (g_contract) {
+      setContractCallStatus(currentState => ({ ...currentState, working: true, uiText: "Uploading to IPFS..." }));
+      const ipfs_url = await uploadData();
+      console.log(ipfs_url);
+      const { data } = await g_contract.populateTransaction.writeReview(rating, ipfs_url);
 
       const request: CallWithERC2771Request = {
         chainId: chainId,
@@ -103,12 +131,12 @@ const Home: NextPage = () => {
         user: user
       };
       const relayResponse = await relay.sponsoredCallERC2771(request, provider, gelatoAPI);
-      // todo set status
+      setContractCallStatus(currentState => ({ ...currentState, submitReviewTaskId: relayResponse.taskId, uiText: "Minting soulbound token..." }));
     }
   };
 
   const burnToken = async () => {
-    if(g_contract) {
+    if (g_contract) {
       setContractCallStatus(currentState => ({ ...currentState, working: true, uiText: "burning token" }));
       const { data } = await g_contract.populateTransaction.burn(reviewTokenId);
 
@@ -138,52 +166,16 @@ const Home: NextPage = () => {
     }
   };
 
-  const uploadData = async () => {
-    const dataToUpload = [JSON.stringify(
-      {
-        "description": "Review Token for MyApp",
-        "image": "https://storage.googleapis.com/opensea-prod.appspot.com/puffs/3.png", // todo: put images here
-        "name": "MyApp Raring #" + { rating },
-        "attributes": [
-          {
-            "display_type": "number",
-            "trait_type": "Rating",
-            "value": { rating }
-          },
-          {
-            "trait_type": "Review",
-            "value": { review }
-          },
-          {
-            "display_type": "number",
-            "trait_type": "Generation",
-            "value": 2
-          },
-          {
-            "display_type": "boost_number",
-            "trait_type": "Aqua Power",
-            "value": 40
-          },
-          {
-            "display_type": "boost_percentage",
-            "trait_type": "Stamina Increase",
-            "value": 10
-          },
-        ]
-      }
-    )];
-    const uris = await upload({ data: dataToUpload });
-    console.log(uris);
-    const updatedString = uris[0].replace("://", "/");
-    console.log("https://ipfs.io/" + updatedString);
-    return "https://ipfs.io/" + updatedString;
-  };
-  const getTokenId = async () => {
-    
-    console.log(reviewTokenId);
-    console.log(reviewTokenId._hex);
-  };
-  // const getTokenId = async () => useContractRead(contract, "getTokenId", [address]).data;
+  // const test = () => {
+  //   console.log(reviewTokenId.toNumber());
+  // }
+
+  const getTokenId = () => {
+    if(reviewTokenId) {
+      return reviewTokenId.toNumber();
+    }
+    return -1;
+  }
 
   return (
     <main className={styles.main}>
@@ -196,7 +188,7 @@ const Home: NextPage = () => {
             </span>
           </h1>
 
-          <div>
+          <div >
             <h2>Reviews</h2>
           </div>
 
@@ -216,10 +208,17 @@ const Home: NextPage = () => {
               {reviewTokenId == -1 ? (
                 <div>
                   <p>Write a review and get rewared with 0.05 eth!</p>
-                  <div>
-                    <label htmlFor="review">
-                      Rating:
-                      <select value={rating !== null ? rating : ''} onChange={(e) => setRating(parseInt(e.target.value))} disabled={contractCallStatus.working}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <label htmlFor="review" style={{ width: '100px' }}>
+                        Rating:
+                      </label>
+                      <select
+                        value={rating !== null ? rating : ''}
+                        onChange={(e) => setRating(parseInt(e.target.value))}
+                        disabled={contractCallStatus.working}
+                        style={{ flexGrow: 1, maxWidth: '200px' }} // Adjusted width here
+                      >
                         <option value="" disabled>Select Rating</option>
                         <option value={1}>1</option>
                         <option value={2}>2</option>
@@ -232,22 +231,39 @@ const Home: NextPage = () => {
                         <option value={9}>9</option>
                         <option value={10}>10</option>
                       </select>
-                    </label>
-                    <label htmlFor="reviewText">
-                      Review:
-                      <textarea id="reviewText" value={review} onChange={(e) => setReview(e.target.value)} disabled={contractCallStatus.working}/>
-                    </label>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+                      <label htmlFor="reviewText" style={{ width: '100px' }}>
+                        Review:
+                      </label>
+                      <textarea
+                        id="reviewText"
+                        value={review}
+                        onChange={(e) => setReview(e.target.value)}
+                        disabled={contractCallStatus.working}
+                        style={{ flexGrow: 1, resize: 'vertical', maxWidth: '200px' }} // Adjusted width here
+                      />
+                    </div>
                   </div>
+
                   <div>
                     <button onClick={submitReview} disabled={contractCallStatus.working}>Submit Review</button>
-                    <button onClick={uploadData} disabled={contractCallStatus.working}>Upload to IPFS</button>
-                    <button onClick={getTokenId} disabled={contractCallStatus.working}>Check token</button> 
                   </div>
                 </div>
               ) : (
                 <div>
-                  <p>review alreayd written with token id xxxx</p>
-                  <button onClick={burnToken}>Burn</button>
+                  <p>
+                    You have already written a review with {" "}
+                    <a
+                      href={`https://sepolia-blockscout.lisk.com/token/${target}/instance/${getTokenId()}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      token id {getTokenId()}
+                    </a>
+                  </p>
+
+                  <button onClick={burnToken} disabled={contractCallStatus.working} >Burn</button>
                 </div>
               )}
             </div>
