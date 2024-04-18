@@ -126,11 +126,14 @@ const Home: NextPage = () => {
       const { data } = await g_contract.populateTransaction.writeReview(rating, ipfs_url);
 
       const request: CallWithERC2771Request = {
+        // @ts-ignore
         chainId: chainId,
         target: target,
+        // @ts-ignore
         data: data as BytesLike,
         user: user
       };
+      // @ts-ignore
       const relayResponse = await relay.sponsoredCallERC2771(request, provider, gelatoAPI);
       setContractCallStatus(currentState => ({ ...currentState, submitReviewTaskId: relayResponse.taskId, uiText: "Minting soulbound token..." }));
     }
@@ -142,11 +145,14 @@ const Home: NextPage = () => {
       const { data } = await g_contract.populateTransaction.burn(reviewTokenId);
 
       const request: CallWithERC2771Request = {
+        // @ts-ignore
         chainId: chainId,
         target: target,
+        // @ts-ignore
         data: data as BytesLike,
         user: user
       };
+      // @ts-ignore
       const relayResponse = await relay.sponsoredCallERC2771(request, provider, gelatoAPI);
       setContractCallStatus(currentState => ({ ...currentState, submitReviewTaskId: relayResponse.taskId })); // todo
     }
@@ -157,11 +163,14 @@ const Home: NextPage = () => {
     if (g_contract) {
       const { data } = await g_contract.populateTransaction.coreFeature();
       const request: CallWithERC2771Request = {
+        // @ts-ignore
         chainId: chainId,
         target: target,
+        // @ts-ignore
         data: data as BytesLike,
         user: user
       };
+      // @ts-ignore
       const relayResponse = await relay.sponsoredCallERC2771(request, provider, gelatoAPI);
       setContractCallStatus(currentState => ({ ...currentState, functionalityCallTaskId: relayResponse.taskId }));
     }

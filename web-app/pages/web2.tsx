@@ -65,11 +65,14 @@ const Home: NextPage = () => {
     console.log(chainId);
 
     const request: CallWithERC2771Request = {
+      // @ts-ignore
       chainId: chainId,
       target: target,
+      // @ts-ignore
       data: data as BytesLike,
       user: user
     };
+    // @ts-ignore
     const relayResponse = await relay.sponsoredCallERC2771(request, provider, gelatoAPI);
     console.log(relayResponse);
     
