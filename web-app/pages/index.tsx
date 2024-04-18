@@ -169,13 +169,13 @@ const Home: NextPage = () => {
 
   const getAvgRating = () => {
     if (avgRatings) {
-      return avgRatings.toNumber()/1000;
+      return avgRatings.toNumber() / 1000;
     }
     return -1;
   }
 
   const getTokenId = () => {
-    if(reviewTokenId) {
+    if (reviewTokenId) {
       return reviewTokenId.toNumber();
     }
     return -1;
@@ -203,7 +203,7 @@ const Home: NextPage = () => {
           </div>
 
           <div>
-            <h2>Features!</h2>
+            <h2>Features</h2>
             <button id="relayRequest" onClick={useFunctionality} disabled={contractCallStatus.working}>
               Use Some Feature
             </button>
@@ -272,6 +272,29 @@ const Home: NextPage = () => {
                   <button onClick={burnToken} disabled={contractCallStatus.working} >Burn</button>
                 </div>
               )}
+            </div>
+
+            <div>
+              <h2>Refer a friend</h2>
+              <p>When your friend uses the core functionaliyt of the app, you get rewared with 0.05 eth</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+                  <label htmlFor="cryptoAddress" style={{ width: '100px' }}>
+                    Address:
+                  </label>
+                  <input
+                    type="text"
+                    id="cryptoAddress"
+                    disabled={contractCallStatus.working}
+                    pattern="[0-9a-zA-Z]{42}"
+                    style={{ flexGrow: 1, maxWidth: '200px' }} 
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <button onClick={submitReview} disabled={contractCallStatus.working}>Refer</button>
+              </div>
             </div>
 
             <div>

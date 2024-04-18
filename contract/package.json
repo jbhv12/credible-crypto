@@ -1,0 +1,20 @@
+{
+  "name": "hardhat-javascript-starter",
+  "scripts": {
+    "build": "npx thirdweb@latest detect",
+    "deploy": "npx thirdweb@latest deploy",
+    "release": "npx thirdweb@latest release"
+  },
+  "devDependencies": {
+    "@matterlabs/hardhat-zksync-solc": "^0.3.17",
+    "hardhat": "^2.13.0",
+    "@gelatonetwork/relay-context": "^3.2.0",
+    "@nomicfoundation/hardhat-toolbox-viem": "^3.0.0",
+    "@openzeppelin/contracts": "^5.0.2",
+    "dotenv": "^16.4.5"
+  },
+  "dependencies": {
+    "@thirdweb-dev/contracts": "^3.8.0",
+    "zksync-web3": "^0.14.3"
+  }
+}
