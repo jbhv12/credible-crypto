@@ -1,11 +1,8 @@
 import {
-  ThirdwebNftMedia,
   useAddress,
   useChainId,
   useContract,
   useContractRead,
-  useMetamask,
-  useNFTs,
   ConnectWallet,
   useStorageUpload
 } from "@thirdweb-dev/react";
@@ -14,7 +11,6 @@ import { Bytes, BytesLike, ethers } from "ethers";
 import ReviewTokenABI from "../assets/abi/ReviewToken.json";
 
 import styles from "../styles/Home.module.css";
-import Image from "next/image";
 import { NextPage } from "next";
 
 import { useState, useEffect } from "react";
@@ -61,6 +57,8 @@ const Home: NextPage = () => {
 
   const [review, setReview] = useState("");
   const [rating, setRating] = useState(0);
+  const [numberOfUsers, setNumberOfUsers] = useState(-1);
+
 
   interface ContractCallStatus {
     working: boolean;
@@ -77,6 +75,7 @@ const Home: NextPage = () => {
   const [signer, setSigner] = useState<ethers.Signer | null>(null);
   const [user, setUser] = useState<string | null>(null);
   const [g_contract, setGContract] = useState<ethers.Contract | null>(null);
+  
   useEffect(() => {
     if (window.ethereum) {
       const web3Provider = new ethers.providers.Web3Provider(window.ethereum as any);
@@ -86,13 +85,26 @@ const Home: NextPage = () => {
       web3Signer.getAddress().then(setUser);
       const g_contract = new ethers.Contract(target, ReviewTokenABI.abi, web3Signer);
       setGContract(g_contract);
-
-      // todo get existing token if it exists
-      // getTokenId();
-
     } else {
       console.error("Please install MetaMask!");
     }
+  }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch('https://sepolia-blockscout.lisk.com/api/v2/tokens/0xEA4C26D469312A9BBC24bC89F6061ebC212fF37F'); // todo
+        const { holders } = await response.json();
+        setNumberOfUsers(holders);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+
+    const intervalId = setInterval(fetchData, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(intervalId);
+
   }, []);
 
   const uploadData = async () => {
@@ -203,8 +215,7 @@ const Home: NextPage = () => {
 
           <div >
             <h2>Reviews</h2>
-            <p>xx people say so with an avg rating of {getAvgRating()}</p>
-            {/* https://sepolia-blockscout.lisk.com/token/0xA3f3e7478455583DC325319AF3c79ccC9B9F1462?tab=holders */}
+            <p>{numberOfUsers} people say so with an avg rating of {getAvgRating()}</p>
           </div>
 
           <div className={styles.connect}>
@@ -212,78 +223,83 @@ const Home: NextPage = () => {
           </div>
 
           <div>
-            <h2>Features</h2>
-            <button id="relayRequest" onClick={useFunctionality} disabled={contractCallStatus.working}>
-              Use Some Feature
-            </button>
+            {address && (
+              <div id="feat">
+                <h2>Features</h2>
+                <button id="relayRequest" onClick={useFunctionality} disabled={contractCallStatus.working}>
+                  Use Some Feature
+                </button>
+              </div>
+            )}
 
-
-            <div className="review-box">
-              <h2>Write a Review</h2>
-              {reviewTokenId == -1 ? (
-                <div>
-                  <p>Write a review and get rewared with 0.05 eth!</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <label htmlFor="review" style={{ width: '100px' }}>
-                        Rating:
-                      </label>
-                      <select
-                        value={rating !== null ? rating : ''}
-                        onChange={(e) => setRating(parseInt(e.target.value))}
-                        disabled={contractCallStatus.working}
-                        style={{ flexGrow: 1, maxWidth: '200px' }} // Adjusted width here
-                      >
-                        <option value="" disabled>Select Rating</option>
-                        <option value={1}>1</option>
-                        <option value={2}>2</option>
-                        <option value={3}>3</option>
-                        <option value={4}>4</option>
-                        <option value={5}>5</option>
-                        <option value={6}>6</option>
-                        <option value={7}>7</option>
-                        <option value={8}>8</option>
-                        <option value={9}>9</option>
-                        <option value={10}>10</option>
-                      </select>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-                      <label htmlFor="reviewText" style={{ width: '100px' }}>
-                        Review:
-                      </label>
-                      <textarea
-                        id="reviewText"
-                        value={review}
-                        onChange={(e) => setReview(e.target.value)}
-                        disabled={contractCallStatus.working}
-                        style={{ flexGrow: 1, resize: 'vertical', maxWidth: '200px' }} // Adjusted width here
-                      />
-                    </div>
-                  </div>
-
+            {address && (
+              <div id="review" className="review-box">
+                <h2>Write a Review</h2>
+                {reviewTokenId == -1 ? (
                   <div>
-                    <button onClick={submitReview} disabled={contractCallStatus.working}>Submit Review</button>
+                    <p>Write a review and get rewared with 0.05 eth!</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <label htmlFor="review" style={{ width: '100px' }}>
+                          Rating:
+                        </label>
+                        <select
+                          value={rating !== null ? rating : ''}
+                          onChange={(e) => setRating(parseInt(e.target.value))}
+                          disabled={contractCallStatus.working}
+                          style={{ flexGrow: 1, maxWidth: '200px' }} // Adjusted width here
+                        >
+                          <option value="" disabled>Select Rating</option>
+                          <option value={1}>1</option>
+                          <option value={2}>2</option>
+                          <option value={3}>3</option>
+                          <option value={4}>4</option>
+                          <option value={5}>5</option>
+                          <option value={6}>6</option>
+                          <option value={7}>7</option>
+                          <option value={8}>8</option>
+                          <option value={9}>9</option>
+                          <option value={10}>10</option>
+                        </select>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+                        <label htmlFor="reviewText" style={{ width: '100px' }}>
+                          Review:
+                        </label>
+                        <textarea
+                          id="reviewText"
+                          value={review}
+                          onChange={(e) => setReview(e.target.value)}
+                          disabled={contractCallStatus.working}
+                          style={{ flexGrow: 1, resize: 'vertical', maxWidth: '200px' }} // Adjusted width here
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <button onClick={submitReview} disabled={contractCallStatus.working}>Submit Review</button>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div>
-                  <p>
-                    You have already written a review with {" "}
-                    <a
-                      href={`https://sepolia-blockscout.lisk.com/token/${target}/instance/${getTokenId()}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      token id {getTokenId()}
-                    </a>
-                  </p>
+                ) : (
+                  <div>
+                    <p>
+                      You have already written a review with {" "}
+                      <a
+                        href={`https://sepolia-blockscout.lisk.com/token/${target}/instance/${getTokenId()}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        token id {getTokenId()}
+                      </a>
+                    </p>
 
-                  <button onClick={burnToken} disabled={contractCallStatus.working} >Burn</button>
-                </div>
-              )}
-            </div>
+                    <button onClick={burnToken} disabled={contractCallStatus.working} >Burn</button>
+                  </div>
+                )}
+              </div>
+            )}
 
-            <div>
+            {address && (<div id="refer">
               <h2>Refer a friend</h2>
               <p>When your friend uses the core functionaliyt of the app, you get rewared with 0.05 eth</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -296,7 +312,7 @@ const Home: NextPage = () => {
                     id="cryptoAddress"
                     disabled={contractCallStatus.working}
                     pattern="[0-9a-zA-Z]{42}"
-                    style={{ flexGrow: 1, maxWidth: '200px' }} 
+                    style={{ flexGrow: 1, maxWidth: '200px' }}
                     required
                   />
                 </div>
@@ -305,14 +321,19 @@ const Home: NextPage = () => {
                 <button onClick={submitReview} disabled={contractCallStatus.working}>Refer</button>
               </div>
             </div>
+            )}
 
-            <div>
+            <div id="status">
               <h2>App Status: </h2>
-              <p>{contractCallStatus.uiText}</p>
+              <p>{address ? contractCallStatus.uiText : "Connect walltet to get started."}</p>
             </div>
           </div>
         </div>
       </div>
+      {/* <footer>
+        <p>This is the footer content</p>
+      </footer> */}
+
     </main>
   );
 };
