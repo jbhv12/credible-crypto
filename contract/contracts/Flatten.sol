@@ -214,6 +214,58 @@ interface IERC721 is IERC165 {
     function ownerOf(uint256 tokenId) external view returns (address owner);
 
     /**
+     * @dev Safely transfers `tokenId` token from `from` to `to`.
+     *
+     * Requirements:
+     *
+     * - `from` cannot be the zero address.
+     * - `to` cannot be the zero address.
+     * - `tokenId` token must exist and be owned by `from`.
+     * - If the caller is not `from`, it must be approved to move this token by either {approve} or {setApprovalForAll}.
+     * - If `to` refers to a smart contract, it must implement {IERC721Receiver-onERC721Received}, which is called upon
+     *   a safe transfer.
+     *
+     * Emits a {Transfer} event.
+     */
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes calldata data) external;
+
+    /**
+     * @dev Safely transfers `tokenId` token from `from` to `to`, checking first that contract recipients
+     * are aware of the ERC721 protocol to prevent tokens from being forever locked.
+     *
+     * Requirements:
+     *
+     * - `from` cannot be the zero address.
+     * - `to` cannot be the zero address.
+     * - `tokenId` token must exist and be owned by `from`.
+     * - If the caller is not `from`, it must have been allowed to move this token by either {approve} or
+     *   {setApprovalForAll}.
+     * - If `to` refers to a smart contract, it must implement {IERC721Receiver-onERC721Received}, which is called upon
+     *   a safe transfer.
+     *
+     * Emits a {Transfer} event.
+     */
+    function safeTransferFrom(address from, address to, uint256 tokenId) external;
+
+    /**
+     * @dev Transfers `tokenId` token from `from` to `to`.
+     *
+     * WARNING: Note that the caller is responsible to confirm that the recipient is capable of receiving ERC721
+     * or else they may be permanently lost. Usage of {safeTransferFrom} prevents loss, though the caller must
+     * understand this adds an external call which potentially creates a reentrancy vulnerability.
+     *
+     * Requirements:
+     *
+     * - `from` cannot be the zero address.
+     * - `to` cannot be the zero address.
+     * - `tokenId` token must be owned by `from`.
+     * - If the caller is not `from`, it must be approved to move this token by either {approve} or {setApprovalForAll}.
+     *
+     * Emits a {Transfer} event.
+     */
+    function transferFrom(address from, address to, uint256 tokenId) external;
+
+    /**
      * @dev Gives permission to `to` to transfer `tokenId` token to another account.
      * The approval is cleared when the token is transferred.
      *
@@ -1238,6 +1290,35 @@ abstract contract ERC721 is Context, ERC165, IERC721, IERC721Metadata, IERC721Er
         return _operatorApprovals[owner][operator];
     }
 
+    /**
+     * @dev See {IERC721-transferFrom}.
+     */
+    function transferFrom(address from, address to, uint256 tokenId) public virtual {
+        if (to == address(0)) {
+            revert ERC721InvalidReceiver(address(0));
+        }
+        // Setting an "auth" arguments enables the `_isAuthorized` check which verifies that the token exists
+        // (from != 0). Therefore, it is not needed to verify that the return value is not 0 here.
+        address previousOwner = _update(to, tokenId, _msgSender());
+        if (previousOwner != from) {
+            revert ERC721IncorrectOwner(from, tokenId, previousOwner);
+        }
+    }
+
+    /**
+     * @dev See {IERC721-safeTransferFrom}.
+     */
+    function safeTransferFrom(address from, address to, uint256 tokenId) public {
+        safeTransferFrom(from, to, tokenId, "");
+    }
+
+    /**
+     * @dev See {IERC721-safeTransferFrom}.
+     */
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public virtual {
+        transferFrom(from, to, tokenId);
+        _checkOnERC721Received(from, to, tokenId, data);
+    }
 
     /**
      * @dev Returns the owner of the `tokenId`. Does NOT revert if token doesn't exist
@@ -1729,6 +1810,7 @@ abstract contract ReviewToken is
         address writer;
     }
     mapping(address => bool) private _reviewEligibleUsers;
+    mapping(address => bool) private _paidReviewReward;
     mapping(uint256 => Review) private _reviews;
 
     struct Reference {
@@ -1753,6 +1835,7 @@ abstract contract ReviewToken is
 
     modifier reviewEligible() {
         _reviewEligibleUsers[_msgSender()] = true;
+        _paidReviewReward[_msgSender()] = false;
         _;
     }
 
@@ -1782,8 +1865,10 @@ abstract contract ReviewToken is
         uint256 tokenId = safeMint(_msgSender(), uri);
         _reviews[tokenId] = Review(tokenId, rating, _msgSender());
 
-        processPayment(_msgSender(), _reviewRewardAmount);
-        _reviewEligibleUsers[_msgSender()] = false;
+        if(!_paidReviewReward[_msgSender()]) { // only pay reward once
+            processPayment(_msgSender(), _reviewRewardAmount);
+            _paidReviewReward[_msgSender()] = true;
+        }
 
         // update the average ratings
         _ratingsSum += rating;
@@ -1798,12 +1883,12 @@ abstract contract ReviewToken is
         payable(to).transfer(amount);
     }
 
-    function senderOwnedToken() public view returns (int256) {
-        uint256 balance = balanceOf(_msgSender());
+    function getTokenId(address userAddress) public view returns (int256) {
+        uint256 balance = balanceOf(userAddress);
         if (balance > 0) {
             for (uint256 i = 0; i <= _nextTokenId; i++) {
                 try this.ownerOf(i) {
-                    if (ownerOf(i) == _msgSender()) {
+                    if (ownerOf(i) == userAddress) {
                         return int256(i);
                     }
                 } catch {
@@ -1812,6 +1897,10 @@ abstract contract ReviewToken is
             }
         }
         return -1;
+    }
+
+    function senderOwnedToken() public view returns (int256) {
+        return getTokenId(_msgSender());
     }
 
     function burn(uint256 tokenId) public virtual override {
@@ -1833,6 +1922,12 @@ abstract contract ReviewToken is
         _setTokenURI(tokenId, uri);
         return tokenId;
     }
+
+    // soulbound functionality
+
+    // function safeTransferFrom(address from, address to, uint256 tokenId, bytes calldata data) public override {}
+    // function safeTransferFrom(address from, address to, uint256 tokenId) public override {}
+    // function transferFrom(address from, address to, uint256 tokenId) public override {}
 
     // overrdies for gelato relay
 
@@ -1871,13 +1966,19 @@ abstract contract ReviewToken is
     }
 }
 
+
+// File contracts/MyApp.sol
+
+// Original license: SPDX_License_Identifier: UNLICENSED
+pragma solidity ^0.8.24;
+
 contract MyApp is ReviewToken {
     constructor()
         ReviewToken(
             0xd8253782c45a12053594b9deB72d8e8aB2Fca54c,
             "ReviewCollection",
             "REVIEW",
-            5e15
+            1
         )
     {}
 

@@ -181,18 +181,3 @@ abstract contract ReviewToken is
         return super.supportsInterface(interfaceId);
     }
 }
-
-contract MyApp is ReviewToken {
-    constructor()
-        ReviewToken(
-            0xd8253782c45a12053594b9deB72d8e8aB2Fca54c,
-            "ReviewCollection",
-            "REVIEW",
-            1
-        )
-    {}
-
-    function coreFeature() public reviewEligible returns (string memory hw) {
-        return "hello";
-    }
-}

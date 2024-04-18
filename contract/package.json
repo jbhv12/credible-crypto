@@ -1,8 +1,8 @@
 {
   "name": "hardhat-javascript-starter",
   "scripts": {
-    "build": "npx thirdweb@latest detect",
-    "deploy": "npx thirdweb@latest deploy",
+    "build": "npx thirdweb@latest detect && npx hardhat flatten > contracts/Flatten.sol",
+    "deploy": "npx thirdweb@latest deploy -f contracts/Flatten.sol -cn MyApp",
     "release": "npx thirdweb@latest release"
   },
   "devDependencies": {
