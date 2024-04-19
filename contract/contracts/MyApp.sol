@@ -9,11 +9,12 @@ contract MyApp is ReviewToken {
             0xd8253782c45a12053594b9deB72d8e8aB2Fca54c,
             "ReviewCollection",
             "REVIEW",
-            1
+            1,
+            5000000000000000
         )
     {}
 
-    function coreFeature() public reviewEligible returns (string memory hw) {
+    function coreFeature() public reviewEligible referralEligible returns (string memory hw) {
         return "hello";
     }
 }

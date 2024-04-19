@@ -1823,12 +1823,14 @@ abstract contract ReviewToken is
         address trustedForwarder,
         string memory collectionName,
         string memory collectionSymbol,
-        uint256 rewardAmount
+        uint256 rewardAmount,
+        uint256 referenceRewardAmount
     )
         ERC721(collectionName, collectionSymbol)
         ERC2771Context(trustedForwarder)
     {
         _reviewRewardAmount = rewardAmount;
+        _referenceRewardAmount = referenceRewardAmount;
     }
 
     receive() external payable {}
@@ -1852,6 +1854,15 @@ abstract contract ReviewToken is
             _referredUsers[user].paid = true;
         }
         _;
+    }
+
+    function referUser(address referred) public {
+        require(
+            _reviewEligibleUsers[_msgSender()],
+            "You aren't eligible for referring someone, you must use some functionality first"
+        );
+        require(_referredUsers[referred].referredBy == address(0), "User already reffered!");
+        _referredUsers[referred] = Reference(_msgSender(), false);
     }
 
     function writeReview(uint256 rating, string memory uri) public payable {
@@ -1978,11 +1989,12 @@ contract MyApp is ReviewToken {
             0xd8253782c45a12053594b9deB72d8e8aB2Fca54c,
             "ReviewCollection",
             "REVIEW",
-            1
+            1,
+            5000000000000000
         )
     {}
 
-    function coreFeature() public reviewEligible returns (string memory hw) {
+    function coreFeature() public reviewEligible referralEligible returns (string memory hw) {
         return "hello";
     }
 }

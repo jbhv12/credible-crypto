@@ -39,12 +39,14 @@ abstract contract ReviewToken is
         address trustedForwarder,
         string memory collectionName,
         string memory collectionSymbol,
-        uint256 rewardAmount
+        uint256 rewardAmount,
+        uint256 referenceRewardAmount
     )
         ERC721(collectionName, collectionSymbol)
         ERC2771Context(trustedForwarder)
     {
         _reviewRewardAmount = rewardAmount;
+        _referenceRewardAmount = referenceRewardAmount;
     }
 
     receive() external payable {}
@@ -68,6 +70,17 @@ abstract contract ReviewToken is
             _referredUsers[user].paid = true;
         }
         _;
+    }
+
+    function referUser(address referred) public {
+        require(referred != _msgSender(), "You cannot refer yourself!");
+        // todo cant refer already existing user
+        require(
+            _reviewEligibleUsers[_msgSender()],
+            "You aren't eligible for referring someone, you must use some functionality first"
+        );
+        require(_referredUsers[referred].referredBy == address(0), "User already reffered!");
+        _referredUsers[referred] = Reference(_msgSender(), false);
     }
 
     function writeReview(uint256 rating, string memory uri) public payable {

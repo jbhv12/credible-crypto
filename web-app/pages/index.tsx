@@ -18,7 +18,8 @@ import { useState, useEffect } from "react";
 
 const Home: NextPage = () => {
   const { mutateAsync: upload } = useStorageUpload();
-  const target = "0xA3f3e7478455583DC325319AF3c79ccC9B9F1462";
+  const target = "0x1B329aaB594AC443A85694D0FBA441022e3d352f";
+  const contractTokenId = "0xEA4C26D469312A9BBC24bC89F6061ebC212fF37F";
   const address = useAddress();
   const chainId = useChainId();
   const { contract } = useContract(target);
@@ -44,6 +45,11 @@ const Home: NextPage = () => {
       } 
       else if (taskStatus.taskId === contractCallStatus.burnTaskId) {
         setContractCallStatus(currentState => ({ ...currentState, burnTaskId: null }));
+        window.location.reload();
+      }
+      else if (taskStatus.taskId === contractCallStatus.referUserTaskId) {
+        setContractCallStatus(currentState => ({ ...currentState, referUserTaskId: null }));
+  
       }
 
       // set status
@@ -72,9 +78,10 @@ const Home: NextPage = () => {
     ipfsCallTaskId: string | null;
     submitReviewTaskId: string | null;
     burnTaskId: string | null;
+    referUserTaskId: string | null;
   }
   const [contractCallStatus, setContractCallStatus] = useState<ContractCallStatus>(
-    { working: false, uiText: "idle", functionalityCallTaskId: null, ipfsCallTaskId: null, submitReviewTaskId: null, burnTaskId: null }
+    { working: false, uiText: "idle", functionalityCallTaskId: null, ipfsCallTaskId: null, submitReviewTaskId: null, burnTaskId: null, referUserTaskId: null }
   );
 
   const [provider, setProvider] = useState<ethers.providers.Web3Provider | null>(null);
@@ -99,7 +106,7 @@ const Home: NextPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('https://sepolia-blockscout.lisk.com/api/v2/tokens/0xEA4C26D469312A9BBC24bC89F6061ebC212fF37F'); // todo
+        const response = await fetch('https://sepolia-blockscout.lisk.com/api/v2/tokens/' + contractTokenId); // todo
         const { holders } = await response.json();
         setNumberOfUsers(holders);
       } catch (error) {
@@ -177,7 +184,7 @@ const Home: NextPage = () => {
   };
 
   const useFunctionality = async () => {
-    setContractCallStatus(currentState => ({ ...currentState, working: true, uiText: "Calling a feature!" }));
+    setContractCallStatus(currentState => ({ ...currentState, working: true, uiText: "Calling a feature..." }));
     if (g_contract) {
       const { data } = await g_contract.populateTransaction.coreFeature();
       const request: CallWithERC2771Request = {
@@ -194,22 +201,23 @@ const Home: NextPage = () => {
     }
   };
 
-  const getAvgRating = () => {
-    if (avgRatings) {
-      return avgRatings.toNumber() / 1000;
-    }
-    return -1;
-  }
+  const referUser = async () => {
+    if (g_contract) {
+      setContractCallStatus(currentState => ({ ...currentState, working: true, uiText: "Trying to refer your friend..." }));
+      const { data } = await g_contract.populateTransaction.referUser(refferedUserAddress);
 
-  const getTokenId = () => {
-    if (reviewTokenId) {
-      return reviewTokenId.toNumber();
+      const request: CallWithERC2771Request = {
+        // @ts-ignore
+        chainId: chainId,
+        target: target,
+        // @ts-ignore
+        data: data as BytesLike,
+        user: user
+      };
+      // @ts-ignore
+      const relayResponse = await relay.sponsoredCallERC2771(request, provider, gelatoAPI);
+      setContractCallStatus(currentState => ({ ...currentState, referUserTaskId: relayResponse.taskId, uiText: "Trying to refer your friend using gelato relay..." }));
     }
-    return -1;
-  }
-
-  const referUser = () => {
-    referUserMutateAsync({ args: [refferedUserAddress] });
   }
 
   return (
@@ -225,7 +233,7 @@ const Home: NextPage = () => {
 
           <div style={{ flex: '1', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <h2>Reviews</h2>
-            <p>{numberOfUsers} people say so with an avg rating of {getAvgRating()}</p>
+            <p>{numberOfUsers} people say so with an avg rating of {avgRatings ? avgRatings.toNumber() / 1000 : "no reviews yet"}</p>
           </div>
 
           <div className={styles.connect} style={{ flex: '1', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -246,7 +254,7 @@ const Home: NextPage = () => {
               {address && (
                 <div id="review" className="review-box" style={{ flex: '1', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <h2>Write a Review</h2>
-                  {reviewTokenId == -1 ? (
+                  {!reviewTokenId || reviewTokenId == -1 ? (
                     <div>
                       <p>Write a review and get rewared with 0.05 eth!</p>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -296,11 +304,11 @@ const Home: NextPage = () => {
                       <p>
                         You have already written a review with {" "}
                         <a
-                          href={`https://sepolia-blockscout.lisk.com/token/${target}/instance/${getTokenId()}`}
+                          href={`https://sepolia-blockscout.lisk.com/token/${target}/instance/${reviewTokenId}`}
                           target="_blank"
                           rel="noopener noreferrer"
                         >
-                          token id {getTokenId()}
+                          token id {reviewTokenId ? reviewTokenId.toNumber() : -1}
                         </a>
                       </p>
 
