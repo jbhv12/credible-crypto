@@ -1,5 +1,11 @@
 {
-  "name": "hardhat-javascript-starter",
+  "name": "jbhv12-web3-testimonials",
+  "version": "0.0.1",
+  "description": "Smart contract for web3 testimonials!",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jbhv12/web3-testimonials.git"
+  },
   "scripts": {
     "build": "npx thirdweb@latest detect && npx hardhat flatten > contracts/Flatten.sol",
     "deploy": "npx thirdweb@latest deploy -f contracts/Flatten.sol -cn MyApp",
