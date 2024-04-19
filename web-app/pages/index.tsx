@@ -41,6 +41,9 @@ const Home: NextPage = () => {
       }
       else if (taskStatus.taskId === contractCallStatus.submitReviewTaskId) {
         setContractCallStatus(currentState => ({ ...currentState, submitReviewTaskId: null }));
+      } 
+      else if (taskStatus.taskId === contractCallStatus.burnTaskId) {
+        setContractCallStatus(currentState => ({ ...currentState, burnTaskId: null }));
       }
 
       // set status
@@ -68,9 +71,10 @@ const Home: NextPage = () => {
     functionalityCallTaskId: any;
     ipfsCallTaskId: string | null;
     submitReviewTaskId: string | null;
+    burnTaskId: string | null;
   }
   const [contractCallStatus, setContractCallStatus] = useState<ContractCallStatus>(
-    { working: false, uiText: "idle", functionalityCallTaskId: null, ipfsCallTaskId: null, submitReviewTaskId: null }
+    { working: false, uiText: "idle", functionalityCallTaskId: null, ipfsCallTaskId: null, submitReviewTaskId: null, burnTaskId: null }
   );
 
   const [provider, setProvider] = useState<ethers.providers.Web3Provider | null>(null);
@@ -155,7 +159,7 @@ const Home: NextPage = () => {
 
   const burnToken = async () => {
     if (g_contract) {
-      setContractCallStatus(currentState => ({ ...currentState, working: true, uiText: "burning token" }));
+      setContractCallStatus(currentState => ({ ...currentState, working: true, uiText: "burning token..." }));
       const { data } = await g_contract.populateTransaction.burn(reviewTokenId);
 
       const request: CallWithERC2771Request = {
@@ -168,7 +172,7 @@ const Home: NextPage = () => {
       };
       // @ts-ignore
       const relayResponse = await relay.sponsoredCallERC2771(request, provider, gelatoAPI);
-      setContractCallStatus(currentState => ({ ...currentState, submitReviewTaskId: relayResponse.taskId })); // todo
+      setContractCallStatus(currentState => ({ ...currentState, burnTaskId: relayResponse.taskId }));
     }
   };
 
@@ -340,10 +344,6 @@ const Home: NextPage = () => {
           </div>
         </div>
       </div>
-      {/* <footer>
-        <p>This is the footer content</p>
-      </footer> */}
-
     </main>
   );
 };
