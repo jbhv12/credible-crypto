@@ -18,3 +18,6 @@ contract MyApp is ReviewToken {
         return "hello";
     }
 }
+
+
+// test
