@@ -6,7 +6,7 @@ on:
       - main
       - dev
     paths:
-      - 'web-app/*'
+      - 'web-app/**'
 
 jobs:
   build:
