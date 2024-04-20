@@ -19,5 +19,6 @@ jobs:
           node-version: "20"
       - uses: JS-DevTools/npm-publish@v3
         with:
+          package: 'contract/'
           token: ${{ secrets.NPM_TOKEN }}
           registry: "https://registry.npmjs.org"
