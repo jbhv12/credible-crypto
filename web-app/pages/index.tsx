@@ -233,7 +233,7 @@ const Home: NextPage = () => {
           <div style={{ flex: '1', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <h2>Reviews</h2>
             {avgRatings && numberOfUsers != -1 ? (
-              <p>{numberOfUsers} people gave it an <a href={`https://sepolia-blockscout.lisk.com/token/${target}?tab=inventory`}>avg rating of {avgRatings.toNumber() / 1000}/10</a></p>
+              <p>{numberOfUsers} people gave it an <a href="https://sepolia-blockscout.lisk.com/token/0x9C384C6676f60e7a6Ad4E13655aD1894a8453287?tab=inventory">avg rating of {avgRatings.toNumber() / 1000}/10</a></p>
             ) : (
                 <p>There are no reviews yet.</p>
             )}
