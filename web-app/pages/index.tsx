@@ -353,8 +353,7 @@ const Home: NextPage = () => {
               <h2>App Status: </h2>
               <p>{address ? contractCallStatus.uiText : "Connect walltet to get started."}</p>
             </div>
-            <div id="status" style={{ flex: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '30px'}}>
-          
+            <div id="footer" style={{ flex: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '30px'}}>
               <p>created by: <a href="https://jay.is-savvy.dev/">https://jay.is-savvy.dev/</a>  |  <a href="https://github.com/jbhv12/credible-crypto">GitHub</a></p>
             </div>
           </div>
