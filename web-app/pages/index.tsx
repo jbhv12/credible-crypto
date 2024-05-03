@@ -124,7 +124,7 @@ const Home: NextPage = () => {
     const dataToUpload = [JSON.stringify(
       {
         "description": "Review Token for MyApp",
-        "image": "https://storage.googleapis.com/opensea-prod.appspot.com/puffs/" + rating + ".png",
+        "image": "https://raw.githubusercontent.com/jbhv12/web3-testimonials/main/web-app/assets/nft-images/" + rating + ".png",
         "name": "MyApp Raring #" + rating,
         "attributes": [
           {
