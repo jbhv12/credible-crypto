@@ -18,8 +18,7 @@ import { useState, useEffect } from "react";
 
 const Home: NextPage = () => {
   const { mutateAsync: upload } = useStorageUpload();
-  const target = "0x1B329aaB594AC443A85694D0FBA441022e3d352f";
-  const contractTokenId = "0xEA4C26D469312A9BBC24bC89F6061ebC212fF37F";
+  const target = "0x9C384C6676f60e7a6Ad4E13655aD1894a8453287";
   const address = useAddress();
   const chainId = useChainId();
   const { contract } = useContract(target);
@@ -106,7 +105,7 @@ const Home: NextPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('https://sepolia-blockscout.lisk.com/api/v2/tokens/' + contractTokenId); // todo
+        const response = await fetch('https://sepolia-blockscout.lisk.com/api/v2/tokens/' + target);
         const { holders } = await response.json();
         setNumberOfUsers(holders);
       } catch (error) {
@@ -227,13 +226,18 @@ const Home: NextPage = () => {
           <h1 className={styles.title} style={{ flex: '1', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             Welcome to{" "}
             <span className={styles.gradientText0}>
-              My Actually Awesome App
+              Credible Crypto
             </span>
           </h1>
 
           <div style={{ flex: '1', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <h2>Reviews</h2>
-            <p>{numberOfUsers} people say so with an avg rating of {avgRatings ? avgRatings.toNumber() / 1000 : "no reviews yet"}</p>
+            {avgRatings && numberOfUsers != -1 ? (
+                <p>{numberOfUsers} people say so with an <a href="">avg rating of {avgRatings.toNumber() / 1000}/10</a></p>
+            ) : (
+                <p>There are no reviews yet.</p>
+            )}
+
           </div>
 
           <div className={styles.connect} style={{ flex: '1', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>

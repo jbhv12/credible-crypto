@@ -85,22 +85,10 @@ const Home: NextPage = () => {
           <h1 className={styles.title}>
             Welcome to{" "}
             <span className={styles.gradientText0}>
-                My Actually Awesome App
+                My Awesome App
             </span>
           </h1>
-          <div className={styles.connect}>
-            <ConnectWallet />
-          </div>
-
-          <div>
-            <p>{owner}</p>
-            {owner === address ? <p>true</p> : <p>false</p>}
-
-            <button id="relayRequest" onClick={sendRelayRequest}>
-              Send Request
-            </button>
-
-          </div>
+          <h2>100 people gave it avg rating of 9.8/10!</h2>
         </div>
       </div>
     </main>
